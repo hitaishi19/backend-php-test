@@ -65,14 +65,20 @@ $app->get('/todo/{id}', function ($id) use ($app) {
 ->value('id', null);
 
 
+// Set up the route and controller for adding a todo
 $app->post('/todo/add', function (Request $request) use ($app) {
     if (null === $user = $app['session']->get('user')) {
         return $app->redirect('/login');
     }
 
-    $user_id = $user['id'];
     $description = $request->get('description');
 
+    //check if description is empty or not
+    if (empty($description)) {
+        return new Response('Todo description is required.', 400);
+    }
+
+    $user_id = $user['id'];
     $sql = "INSERT INTO todos (user_id, description) VALUES ('$user_id', '$description')";
     $app['db']->executeUpdate($sql);
 
