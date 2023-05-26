@@ -8,16 +8,25 @@ use Symfony\Component\HttpFoundation\Session\Flash\FlashBagInterface;
 
 class TodoTest extends TestCase
 {
-    public function testAddTodoWithoutDescription()
+    protected $app;
+    protected $flashBag;
+
+    protected function setUp() : void
     {
         // Create a mock Silex application
-        $app = new Silex\Application();
+        $this->app = new Silex\Application();
 
         // Mock the necessary dependencies
-        $app['twig'] = new \Twig\Environment(new \Twig\Loader\ArrayLoader());
-        $app['session'] = $this->createMock(\Symfony\Component\HttpFoundation\Session\SessionInterface::class);
-        $app['db'] = $this->createMock(\Doctrine\DBAL\Connection::class);
+        $this->app['twig'] = new \Twig\Environment(new \Twig\Loader\ArrayLoader());
+        $this->app['session'] = $this->createMock(Session::class);
+        $this->app['db'] = $this->createMock(\Doctrine\DBAL\Connection::class);
+        // Mock the FlashBagInterface
+        $this->flashBag = $this->createMock(FlashBagInterface::class);
+    }
 
+    public function testAddTodoWithoutDescription()
+    {
+        $app = $this->app;
         // Set up the route and controller for adding a todo
         $app->post('/todo/add', function (Request $request) use ($app) {
             if (null === $user = $app['session']->get('user')) {
@@ -57,33 +66,27 @@ class TodoTest extends TestCase
 
     public function testMarkTodoAsCompleted()
     {
-        // Create a mock Silex application
-        $app = new Silex\Application();
-
-        // Mock the necessary dependencies
-        $app['twig'] = new \Twig\Environment(new \Twig\Loader\ArrayLoader());
-        $app['session'] = $this->createMock(Session::class);
-        $app['db'] = $this->createMock(\Doctrine\DBAL\Connection::class);
-
-        // Mock the FlashBagInterface
-        $flashBag = $this->createMock(FlashBagInterface::class);
-        $flashBag->expects($this->once())
+        $app = $this->app;
+        $this->flashBag->expects($this->once())
             ->method('add')
             ->with('message', 'Todo marked as completed');
 
         // Set the FlashBagInterface on the session mock
         $app['session']->expects($this->once())
             ->method('getFlashBag')
-            ->willReturn($flashBag);
+            ->willReturn($this->flashBag);
 
-        // Set up the default values in the mock database
-        $defaultTodo = ['id' => 3, 'user_id' => 1, 'description' => 'Test', 'complete' => 0];
-        $app['db']->expects($this->once())
-            ->method('executeUpdate')
-            ->willReturn(1); // Return the number of affected rows
+        // Mock the database query and result
+        $todoId = 3;
+        $todoData = [
+            'id' => $todoId,
+            'title' => 'Sample Todo',
+            'completed' => false,
+        ];
         $app['db']->expects($this->once())
             ->method('fetchAssoc')
-            ->willReturn($defaultTodo);
+            ->with("SELECT * FROM todos WHERE id = '$todoId'")
+            ->willReturn($todoData);
 
         $app->post('/todo/{id}/complete', function ($id) use ($app) {
             if (null === $app['session']->get('user')) {
@@ -115,13 +118,60 @@ class TodoTest extends TestCase
             ->willReturn($user);
 
         // Create a mock request without a description
-        $request = Request::create('/todo/3/complete', 'POST');
+        $request = Request::create('/todo/'.$todoId.'/complete', 'POST');
 
         // Send the request to the application
         $response = $app->handle($request);
 
         // Assert that the response contains the todos and has a successful status code
         $this->assertStringContainsString('Todo marked as completed', $response->getContent(), 'success');
+        $this->assertEquals(200, $response->getStatusCode());
+    }
+
+    public function testViewTodoAsJson()
+    {
+        $app = $this->app;
+
+        // Mock the database query and result
+        $todoId = 1;
+        $todoData = [
+            'id' => $todoId,
+            'title' => 'Sample Todo',
+            'completed' => false,
+        ];
+        $app['db']->expects($this->once())
+            ->method('fetchAssoc')
+            ->with("SELECT * FROM todos WHERE id = '$todoId'")
+            ->willReturn($todoData);
+
+        $app->get('/todo/{id}/json', function ($id) use ($app) {
+            if (null === $user = $app['session']->get('user')) {
+                return $app->redirect('/login');
+            }
+            if ($id){
+                $sql = "SELECT * FROM todos WHERE id = '$id'";
+                $todo = $app['db']->fetchAssoc($sql);
+                return json_encode($todo);
+            }
+            return null;
+        });
+
+        // Create a mock user and set it in the session
+        $user = ['id' => 1];
+        $app['session']->expects($this->once())
+            ->method('get')
+            ->with('user')
+            ->willReturn($user);
+
+        // Create a mock request without a description
+        $request = Request::create('/todo/'.$todoId.'/json', 'GET');
+
+        // Send the request to the application
+        $response = $app->handle($request);
+
+        // Assert that the response is a JSON response with the expected todo data
+        $expectedResponse = json_encode($todoData);
+        $this->assertJsonStringEqualsJsonString($expectedResponse, $response->getContent());
         $this->assertEquals(200, $response->getStatusCode());
     }
 }

@@ -116,3 +116,19 @@ $app->post('/todo/{id}/complete', function ($id) use ($app) {
 
     return $app->redirect('/todo');
 });
+
+// Set up the route and controller for fetching given todo in JSON format
+$app->get('/todo/{id}/json', function ($id) use ($app) {
+    if (null === $user = $app['session']->get('user')) {
+        return $app->redirect('/login');
+    }
+
+    if ($id){
+        $sql = "SELECT * FROM todos WHERE id = '$id'";
+        $todo = $app['db']->fetchAssoc($sql);
+
+        //return json format of the query response
+        return json_encode($todo);
+    }
+    return null;
+});
