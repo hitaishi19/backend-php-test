@@ -54,11 +54,26 @@ $app->get('/todo/{id}', function ($id) use ($app) {
             'todo' => $todo,
         ]);
     } else {
-        $sql = "SELECT * FROM todos WHERE user_id = '${user['id']}'";
+        $page = $app['request']->query->get('page', 1); // Get the page query parameter, default to 1 if not provided
+
+        $limit = 3; // Number of todos per page
+        $offset = ($page - 1) * $limit;
+
+        // Fetch the todos for the current page
+        $sql = "SELECT * FROM todos WHERE user_id = '${user['id']}' LIMIT $limit OFFSET $offset";
         $todos = $app['db']->fetchAll($sql);
+
+        // Count the total number of todos
+        $countSql = "SELECT COUNT(*) AS count FROM todos WHERE user_id = '${user['id']}'";
+        $totalCount = $app['db']->fetchAssoc($countSql)['count'];
+
+        // Calculate the total number of pages
+        $totalPages = ceil($totalCount / $limit);
 
         return $app['twig']->render('todos.html', [
             'todos' => $todos,
+            'page' => $page,
+            'totalPages' => $totalPages,
         ]);
     }
 })
@@ -76,6 +91,9 @@ $app->post('/todo/add', function (Request $request) use ($app) {
     //check if description is empty or not
     if (empty($description)) {
         $app['session']->getFlashBag()->add('error', 'Todo description is required');
+        return $app->redirect('/todo');
+    } else if(strlen($description) > 100) {
+        $app['session']->getFlashBag()->add('error', 'Todo description should be less than 100 characters');
         return $app->redirect('/todo');
     }
 
