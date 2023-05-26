@@ -93,3 +93,26 @@ $app->match('/todo/delete/{id}', function ($id) use ($app) {
 
     return $app->redirect('/todo');
 });
+
+// Set up the route and controller for marking todo as complete
+$app->post('/todo/{id}/complete', function ($id) use ($app) {
+    if (null === $app['session']->get('user')) {
+        return $app->redirect('/login');
+    }
+
+    if ($id){
+        $sql = "UPDATE todos SET complete = 1 WHERE id = '$id' ";
+        $app['db']->executeUpdate($sql);
+        
+        $sql = "SELECT * FROM todos WHERE id = '$id'";
+        $todo = $app['db']->fetchAssoc($sql);
+
+        $app['session']->getFlashBag()->add('message', 'Todo marked as completed');
+
+        return $app['twig']->render('todo.html', [
+            'todo' => $todo,
+        ]);
+    }
+
+    return $app->redirect('/todo');
+});

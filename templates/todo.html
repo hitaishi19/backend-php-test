@@ -3,12 +3,26 @@
 {% block content %}
 <div class="col-md-4 col-md-offset-4">
     <h1>Todo:</h1>
+    {% if app.session.getFlashBag().has('message') %}
+        <div class="alert alert-info">
+            {{ app.session.getFlashBag().get('message')[0] }}
+        </div>
+    {% endif %}
     <table class="table table-striped">
-        <th>#</th><th>User</th><th>Description</th><th></th>
+        <th>#</th><th>User</th><th>Description</th><th>Status</th><th></th>
         <tr>
             <td>{{ todo.id }}</td>
             <td>{{ todo.user_id }}</td>
             <td>{{ todo.description }}</td>
+            <td>
+                {% if todo.complete == '1' %}
+                    <span>Completed</span>
+                {% else %}
+                    <form method="post" action="{{ app.request.baseurl }}/todo/{{ todo.id }}/complete">
+                        <button type="submit" class="btn btn-xs btn-success">Complete</button>
+                    </form>
+                {% endif %}
+            </td>
             <td>
                 <form method="post" action="{{ app.request.baseurl }}/todo/delete/{{ todo.id }}">
                     <button type="submit" class="btn btn-xs btn-danger"><span class="glyphicon glyphicon-remove glyphicon-white"></span></button>

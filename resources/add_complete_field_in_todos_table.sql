@@ -1,0 +1,4 @@
+ALTER TABLE todos
+ADD COLUMN 
+complete BOOLEAN NOT NULL DEFAULT 0
+AFTER description;
