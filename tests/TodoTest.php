@@ -27,6 +27,19 @@ class TodoTest extends TestCase
     public function testAddTodoWithoutDescription()
     {
         $app = $this->app;
+
+        $this->app['session']->expects($this->once())
+        ->method('getFlashBag')
+        ->willReturn($this->flashBag);
+
+        $this->flashBag->expects($this->once())
+            ->method('add')
+             ->with('message', 'Todo is added');
+
+        $this->flashBag->expects($this->once())
+             ->method('add')
+              ->with('error', 'Todo description is required');
+
         // Set up the route and controller for adding a todo
         $app->post('/todo/add', function (Request $request) use ($app) {
             if (null === $user = $app['session']->get('user')) {
@@ -36,7 +49,8 @@ class TodoTest extends TestCase
             $description = $request->get('description');
 
             if (empty($description)) {
-                return new Response('Todo description is required.', 400);
+                $app['session']->getFlashBag()->add('error', 'Todo description is required');
+                return $app->redirect('/todo');
             }
 
             $user_id = $user['id'];
@@ -60,21 +74,20 @@ class TodoTest extends TestCase
         $response = $app->handle($request);
 
         // Assert that the response contains the error message and has a 400 status code
-        $this->assertEquals('Todo description is required.', $response->getContent());
-        $this->assertEquals(400, $response->getStatusCode());
+        $this->assertStringContainsString('Todo description is required', $response->getContent());
     }
 
     public function testMarkTodoAsCompleted()
     {
         $app = $this->app;
+
+        $this->app['session']->expects($this->once())
+        ->method('getFlashBag')
+        ->willReturn($this->flashBag);
+
         $this->flashBag->expects($this->once())
             ->method('add')
             ->with('message', 'Todo marked as completed');
-
-        // Set the FlashBagInterface on the session mock
-        $app['session']->expects($this->once())
-            ->method('getFlashBag')
-            ->willReturn($this->flashBag);
 
         // Mock the database query and result
         $todoId = 3;
@@ -94,11 +107,11 @@ class TodoTest extends TestCase
             }
 
             if ($id){
-                $sql = "UPDATE todos SET complete = 1 WHERE id = '$id' ";
-                $app['db']->executeUpdate($sql);
+                $sql1 = "UPDATE todos SET complete = 1 WHERE id = '$id' ";
+                $app['db']->executeUpdate($sql1);
 
-                $sql = "SELECT * FROM todos WHERE id = '$id'";
-                $todo = $app['db']->fetchAssoc($sql);
+                $sql2 = "SELECT * FROM todos WHERE id = '$id'";
+                $todo = $app['db']->fetchAssoc($sql2);
         
                 $app['session']->getFlashBag()->add('message', 'Todo marked as completed');
         
@@ -124,7 +137,7 @@ class TodoTest extends TestCase
         $response = $app->handle($request);
 
         // Assert that the response contains the todos and has a successful status code
-        $this->assertStringContainsString('Todo marked as completed', $response->getContent(), 'success');
+        $this->assertStringContainsString('Todo marked as completed', $response->getContent());
         $this->assertEquals(200, $response->getStatusCode());
     }
 

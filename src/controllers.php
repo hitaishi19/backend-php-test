@@ -75,12 +75,15 @@ $app->post('/todo/add', function (Request $request) use ($app) {
 
     //check if description is empty or not
     if (empty($description)) {
-        return new Response('Todo description is required.', 400);
+        $app['session']->getFlashBag()->add('error', 'Todo description is required');
+        return $app->redirect('/todo');
     }
 
     $user_id = $user['id'];
     $sql = "INSERT INTO todos (user_id, description) VALUES ('$user_id', '$description')";
     $app['db']->executeUpdate($sql);
+
+    $app['session']->getFlashBag()->add('message', 'Todo is added');
 
     return $app->redirect('/todo');
 });
@@ -90,6 +93,8 @@ $app->match('/todo/delete/{id}', function ($id) use ($app) {
 
     $sql = "DELETE FROM todos WHERE id = '$id'";
     $app['db']->executeUpdate($sql);
+
+    $app['session']->getFlashBag()->add('message', 'Todo is removed');
 
     return $app->redirect('/todo');
 });
