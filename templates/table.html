@@ -1,0 +1,56 @@
+<table class="table table-striped" id="todo-data">
+    <th>#</th><th>User</th><th>Description</th><th></th>
+    {% if todos is not empty %}
+        {% for todo in todos %}
+            <tr>
+                <td>{{ todo.id }}</td>
+                <td>{{ todo.user_id }}</td>
+                <td>
+                    <a href="{{ app.request.baseurl }}/todo/{{ todo.id }}">
+                    {{ todo.description }}
+                    </a>
+                </td>
+                <td>
+                    <form method="post" class="delete-form" action="{{ app.request.baseurl }}/todo/delete/{{ todo.id }}">
+                        <button class="btn btn-xs btn-danger remove-todo" data-todo-id="{{ todo.id }}"><span class="glyphicon glyphicon-remove glyphicon-white"></span></button>
+                    </form>
+                </td>
+            </tr>
+        {% endfor %}
+    {% else %}
+        <tr> 
+            <td colspan="4"> No Records Found </td>
+        </tr>
+    {% endif %}
+    </table>
+    <form method="post" class="add-form" action="{{ app.request.baseurl }}/todo/add">
+        <table class="table table-striped">
+            <tr>
+                <td colspan="3">
+                    <input type="text" name="description" class="small-6 small-center" placeholder="Description...">
+                </td>
+                <td>
+                    <button class="btn btn-sm btn-primary add-todo">Add</button>
+                </td>
+            </tr>
+        </table>
+    </form>
+<!-- Pagination -->
+<ul class="pagination">
+    {% if page > 1 %}
+        <li><a href="{{ app.request.baseurl }}/todo?page={{ page - 1 }}">Previous</a></li>
+    {% endif %}
+    {% if totalPages > 0 %}
+        {% for i in 1..totalPages %}
+            {% if page == i %}
+                <li class="active"><span>{{ i }}</span></li>
+            {% else %}
+                <li><a href="{{ app.request.baseurl }}/todo?page={{ i }}">{{ i }}</a></li>
+            {% endif %}
+        {% endfor %}
+    {% endif %}
+
+    {% if page < totalPages %}
+        <li><a href="{{ app.request.baseurl }}/todo?page={{ page + 1 }}">Next</a></li>
+    {% endif %}
+</ul>

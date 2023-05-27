@@ -85,60 +85,92 @@ $app->post('/todo/add', function (Request $request) use ($app) {
     if (null === $user = $app['session']->get('user')) {
         return $app->redirect('/login');
     }
+    try{
+        $response = [];
+        $description = $request->get('description');
+        //check if description is empty or not
+        if (empty($description)) {
+            // Set the warning message
+            $response['error'] = 'Todo description is required';
+        } else if(strlen($description) > 100) {
+            // Set the warning message
+            $response['error'] = 'Todo description should be less than 100 characters';
+        } else {
+            $user_id = $user['id'];
+            $sql = "INSERT INTO todos (user_id, description) VALUES ('$user_id', '$description')";
+            $app['db']->executeUpdate($sql);
 
-    $description = $request->get('description');
+            // Set the success message
+            $response['message'] = 'Todo is added';
+        }
 
-    //check if description is empty or not
-    if (empty($description)) {
-        $app['session']->getFlashBag()->add('error', 'Todo description is required');
-        return $app->redirect('/todo');
-    } else if(strlen($description) > 100) {
-        $app['session']->getFlashBag()->add('error', 'Todo description should be less than 100 characters');
-        return $app->redirect('/todo');
+        // Return the JSON response
+        return $app->json($response);
+    } catch (Exception $e) {
+        // Handle the exception
+        $error = $e->getMessage();
+
+        // Return the error JSON response
+        return $app->json(['error' => $error], 500);
     }
-
-    $user_id = $user['id'];
-    $sql = "INSERT INTO todos (user_id, description) VALUES ('$user_id', '$description')";
-    $app['db']->executeUpdate($sql);
-
-    $app['session']->getFlashBag()->add('message', 'Todo is added');
-
-    return $app->redirect('/todo');
 });
 
 
 $app->match('/todo/delete/{id}', function ($id) use ($app) {
+    try{
+        $response = [];
 
-    $sql = "DELETE FROM todos WHERE id = '$id'";
-    $app['db']->executeUpdate($sql);
+        $sql = "DELETE FROM todos WHERE id = '$id'";
+        $app['db']->executeUpdate($sql);
 
-    $app['session']->getFlashBag()->add('message', 'Todo is removed');
+        $app['session']->getFlashBag()->add('message', 'Todo is removed');
 
-    return $app->redirect('/todo');
+        // Set the success message
+        $response['message'] = 'Todo is removed';
+
+        // Return the JSON response
+        return $app->json($response);
+    } catch (Exception $e) {
+        // Handle the exception
+        $error = $e->getMessage();
+
+        // Return the error JSON response
+        return $app->json(['error' => $error], 500);
+    }
 });
 
 // Set up the route and controller for marking todo as complete
 $app->post('/todo/{id}/complete', function ($id) use ($app) {
-    if (null === $app['session']->get('user')) {
-        return $app->redirect('/login');
+    try {
+        if (null === $app['session']->get('user')) {
+            return $app->redirect('/login');
+        }
+
+        if ($id){
+            $sql = "UPDATE todos SET complete = 1 WHERE id = '$id' ";
+            $app['db']->executeUpdate($sql);
+
+            $sql = "SELECT * FROM todos WHERE id = '$id'";
+            $todo = $app['db']->fetchAssoc($sql);
+
+            // Set the success message
+            $message = 'Todo marked as completed';
+
+            // Return the JSON response
+            return $app->json(['message' => $message, 'todo' => $todo]);
+        }
+
+        // Return the ID not found JSON response
+        return $app->json(['error' => 'Please provide Todo ID'], 500);
+    } catch (Exception $e) {
+        // Handle the exception
+        $error = $e->getMessage();
+
+        // Return the error JSON response
+        return $app->json(['error' => $error], 500);
     }
-
-    if ($id){
-        $sql = "UPDATE todos SET complete = 1 WHERE id = '$id' ";
-        $app['db']->executeUpdate($sql);
-        
-        $sql = "SELECT * FROM todos WHERE id = '$id'";
-        $todo = $app['db']->fetchAssoc($sql);
-
-        $app['session']->getFlashBag()->add('message', 'Todo marked as completed');
-
-        return $app['twig']->render('todo.html', [
-            'todo' => $todo,
-        ]);
-    }
-
-    return $app->redirect('/todo');
 });
+
 
 // Set up the route and controller for fetching given todo in JSON format
 $app->get('/todo/{id}/json', function ($id) use ($app) {
@@ -154,4 +186,44 @@ $app->get('/todo/{id}/json', function ($id) use ($app) {
         return json_encode($todo);
     }
     return null;
+});
+
+$app->get('/fetchAjaxData', function () use ($app) {
+    try{
+        $response = [];
+        if (null === $user = $app['session']->get('user')) {
+            return $app->redirect('/login');
+        }
+
+        $page = $app['request']->query->get('page', 1); // Get the page query parameter, default to 1 if not provided
+
+        $limit = 3; // Number of todos per page
+        $offset = ($page - 1) * $limit;
+
+        // Fetch the todos for the current page
+        $sql = "SELECT * FROM todos WHERE user_id = '${user['id']}' LIMIT $limit OFFSET $offset";
+        $todos = $app['db']->fetchAll($sql);
+
+        // Count the total number of todos
+        $countSql = "SELECT COUNT(*) AS count FROM todos WHERE user_id = '${user['id']}'";
+        $totalCount = $app['db']->fetchAssoc($countSql)['count'];
+
+        // Calculate the total number of pages
+        $totalPages = ceil($totalCount / $limit);
+
+        $response['html'] = $app['twig']->render('table.html', [
+            'todos' => $todos,
+            'page' => $page,
+            'totalPages' => $totalPages,
+        ]);
+
+        // Return the JSON response
+        return $app->json($response);
+    } catch (Exception $e) {
+        // Handle the exception
+        $error = $e->getMessage();
+
+        // Return the error JSON response
+        return $app->json(['error' => $error], 500);
+    }
 });

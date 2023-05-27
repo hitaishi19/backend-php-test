@@ -2,9 +2,7 @@
 
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\Session\Session;
-use Symfony\Component\HttpFoundation\Session\Flash\FlashBagInterface;
 
 class TodoTest extends TestCase
 {
@@ -20,44 +18,45 @@ class TodoTest extends TestCase
         $this->app['twig'] = new \Twig\Environment(new \Twig\Loader\ArrayLoader());
         $this->app['session'] = $this->createMock(Session::class);
         $this->app['db'] = $this->createMock(\Doctrine\DBAL\Connection::class);
-        // Mock the FlashBagInterface
-        $this->flashBag = $this->createMock(FlashBagInterface::class);
     }
 
     public function testAddTodoWithoutDescription()
     {
         $app = $this->app;
 
-        $this->app['session']->expects($this->once())
-        ->method('getFlashBag')
-        ->willReturn($this->flashBag);
-
-        $this->flashBag->expects($this->once())
-            ->method('add')
-             ->with('message', 'Todo is added');
-
-        $this->flashBag->expects($this->once())
-             ->method('add')
-              ->with('error', 'Todo description is required');
-
         // Set up the route and controller for adding a todo
         $app->post('/todo/add', function (Request $request) use ($app) {
             if (null === $user = $app['session']->get('user')) {
                 return $app->redirect('/login');
             }
+            try{
+                $response = [];
+                $description = $request->get('description');
+                //check if description is empty or not
+                if (empty($description)) {
+                    // Set the warning message
+                    $response['error'] = 'Todo description is required';
+                } else if(strlen($description) > 100) {
+                    // Set the warning message
+                    $response['error'] = 'Todo description should be less than 100 characters';
+                } else {
+                    $user_id = $user['id'];
+                    $sql = "INSERT INTO todos (user_id, description) VALUES ('$user_id', '$description')";
+                    $app['db']->executeUpdate($sql);
 
-            $description = $request->get('description');
+                    // Set the success message
+                    $response['message'] = 'Todo is added';
+                }
 
-            if (empty($description)) {
-                $app['session']->getFlashBag()->add('error', 'Todo description is required');
-                return $app->redirect('/todo');
+                // Return the JSON response
+                return $app->json($response);
+            } catch (Exception $e) {
+                // Handle the exception
+                $error = $e->getMessage();
+
+                // Return the error JSON response
+                return $app->json(['error' => $error], 500);
             }
-
-            $user_id = $user['id'];
-            $sql = "INSERT INTO todos (user_id, description) VALUES ('$user_id', '$description')";
-            $app['db']->executeUpdate($sql);
-
-            return $app->redirect('/todo');
         });
 
         // Create a mock user and set it in the session
@@ -81,14 +80,6 @@ class TodoTest extends TestCase
     {
         $app = $this->app;
 
-        $this->app['session']->expects($this->once())
-        ->method('getFlashBag')
-        ->willReturn($this->flashBag);
-
-        $this->flashBag->expects($this->once())
-            ->method('add')
-            ->with('message', 'Todo marked as completed');
-
         // Mock the database query and result
         $todoId = 3;
         $todoData = [
@@ -101,26 +92,36 @@ class TodoTest extends TestCase
             ->with("SELECT * FROM todos WHERE id = '$todoId'")
             ->willReturn($todoData);
 
+        // Set up the route and controller for marking todo as complete
         $app->post('/todo/{id}/complete', function ($id) use ($app) {
-            if (null === $app['session']->get('user')) {
-                return $app->redirect('/login');
-            }
+            try {
+                if (null === $app['session']->get('user')) {
+                    return $app->redirect('/login');
+                }
 
-            if ($id){
-                $sql1 = "UPDATE todos SET complete = 1 WHERE id = '$id' ";
-                $app['db']->executeUpdate($sql1);
+                if ($id){
+                    $sql = "UPDATE todos SET complete = 1 WHERE id = '$id' ";
+                    $app['db']->executeUpdate($sql);
 
-                $sql2 = "SELECT * FROM todos WHERE id = '$id'";
-                $todo = $app['db']->fetchAssoc($sql2);
-        
-                $app['session']->getFlashBag()->add('message', 'Todo marked as completed');
-        
-                return $app['twig']->render('todo.html', [
-                    'todo' => $todo,
-                ]);
+                    $sql = "SELECT * FROM todos WHERE id = '$id'";
+                    $todo = $app['db']->fetchAssoc($sql);
+
+                    // Set the success message
+                    $message = 'Todo marked as completed';
+
+                    // Return the JSON response
+                    return $app->json(['message' => $message, 'todo' => $todo]);
+                }
+
+                // Return the ID not found JSON response
+                return $app->json(['error' => 'Please provide Todo ID'], 500);
+            } catch (Exception $e) {
+                // Handle the exception
+                $error = $e->getMessage();
+
+                // Return the error JSON response
+                return $app->json(['error' => $error], 500);
             }
-        
-            return $app->redirect('/todo');
         });
 
         // Create a mock user and set it in the session

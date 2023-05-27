@@ -3,11 +3,13 @@
 {% block content %}
 <div class="col-md-4 col-md-offset-4">
     <h1>Todo:</h1>
-    {% if app.session.getFlashBag().has('message') %}
+    <!-- {% if app.session.getFlashBag().has('message') %}
         <div class="alert alert-info">
             {{ app.session.getFlashBag().get('message')[0] }}
         </div>
-    {% endif %}
+    {% endif %} -->
+    <div class="alert alert-info" id="message" style="display:none"></div>
+    <div class="alert alert-danger" id="error" style="display:none"></div>
     <table class="table table-striped">
         <th>#</th><th>User</th><th>Description</th><th>Status</th><th></th>
         <tr>
@@ -16,16 +18,17 @@
             <td>{{ todo.description }}</td>
             <td>
                 {% if todo.complete == '1' %}
-                    <span>Completed</span>
+                    Completed
                 {% else %}
-                    <form method="post" action="{{ app.request.baseurl }}/todo/{{ todo.id }}/complete">
-                        <button type="submit" class="btn btn-xs btn-success">Complete</button>
+                    <form method="post" class="mark-complete-form" action="{{ app.request.baseurl }}/todo/{{ todo.id }}/complete">
+                        <button class="btn btn-xs btn-success complete-todo" data-todo-id="{{ todo.id }}">Complete</button>
                     </form>
+                    <span id="completed" style="display:none">Completed</span>
                 {% endif %}
             </td>
             <td>
-                <form method="post" action="{{ app.request.baseurl }}/todo/delete/{{ todo.id }}">
-                    <button type="submit" class="btn btn-xs btn-danger"><span class="glyphicon glyphicon-remove glyphicon-white"></span></button>
+                <form method="post" class="delete-form" action="{{ app.request.baseurl }}/todo/delete/{{ todo.id }}">
+                    <button class="btn btn-xs btn-danger remove-todo" data-todo-id="{{ todo.id }}"><span class="glyphicon glyphicon-remove glyphicon-white"></span></button>
                 </form>
             </td>
         </tr>
