@@ -1,0 +1,115 @@
+AskNicely PHP backend Test
+==========================
+
+This document will consist the task details, the implementation changes done and test coverage.
+To run the Tests use "vendor/bin/phpunit tests/TodoTest.php" in CMD prompt
+
+TASK 1: As a user I can't add a todo without a description.
+-----------------------------------------------------------
+1. Implementation: 
+=> When user click on add button with blank description, it will validate it on backend and display appropriate message.
+
+2. Route:
+=> POST /todo/add
+
+3. TestCase:
+=> testAddTodoWithoutDescription() is testcase written to do unit test for this task.
+
+4. Bug Fixings and Improvements:
+=> Approprate comments is added to given lines of code.
+=> Used exception handling
+=> Validation added to only allow 100 characters in description
+
+
+TASK 2: As a user I can mark a todo as completed.
+-------------------------------------------------
+1. Implementation: 
+=> When user click on todo task, it will redirect to its todo detail page
+=> If todo task is already marked as completed then it will show "Completed" status
+=> If todo task is not marked as completed then "Complete" button will be visible, user can click on the button and mark the task as completed
+
+2. Route:
+=> POST /todo/{id}/complete
+
+3. TestCase:
+=> testMarkTodoAsCompleted() is testcase written to do unit test for this task.
+
+4. Bug Fixings and Improvements:
+=> Approprate comments is added to given lines of code.
+=> Used exception handling
+=> A flash message will be 
+
+
+TASK 3: As a user I can view a todo in a JSON format
+----------------------------------------------------
+1. Implementation: 
+=> When user hits given url in browser it will show todo details in JSON format 
+
+2. Route:
+=> GET /todo/{id}/json
+
+3. TestCase:
+=> testViewTodoAsJson() is testcase written to do unit test for this task.
+
+4. Bug Fixings and Improvements:
+=> Approprate comments is added to given lines of code.
+=> Used exception handlin
+
+
+TASK 4: As a user I can see a confirmation message when I add/delete a todo
+---------------------------------------------------------------------------
+1. Implementation: 
+=> When user add, remove or complete the Todo task, it will show appropriate confirmation message
+
+2. Route:
+=> POST /todo/add
+=> MATCH /todo/delete/{id}
+=> POST /todo/{id}/complete
+
+3. TestCase:
+=> Test case is not developed for this task.
+
+4. Bug Fixings and Improvements:
+=> Approprate comments is added to given lines of code.
+=> Used exception handling
+
+
+TASK 5: As a user I can see my list of todos paginated
+-------------------------------------------------------
+1. Implementation: 
+=> Todo list will be show 3 per page
+=> User can naviage to previous and next page
+=> It will only fetch 3 data at a time from DB
+
+2. Route:
+=> GET todo?page={#}
+
+3. TestCase:
+=> Test case is not developed for this task.
+
+4. Bug Fixings and Improvements:
+=> Approprate comments is added to given lines of code.
+=> Used exception handling
+
+Note: This task will not work after implementation of AJAX as its not developed to support in AJAX response
+
+
+TASK 6: FRONTEND (focus): Use JQuery, VueJs, or React to render the todo list dynamically and allow the delete + completed buttons to work dynamically via Ajax. You do not need pagination to work within your new front end. We care about the user experience here -- this might be animation?
+--------------------------------------------------------------------------------------------------------------------------
+1. Implementation: 
+=> JQuery is used to perform this task
+=> Todo List will load dynamically using AJAX request
+=> Add/Delete/Complete request will manipulate data using AJAX
+
+2. Route:
+=> GET /fetchAjaxData
+=> POST /todo/add
+=> MATCH /todo/delete/{id}
+=> POST /todo/{id}/complete
+
+3. TestCase:
+=> Test case is not developed for this task.
+
+4. Bug Fixings and Improvements:
+=> Approprate comments is added to given lines of code.
+=> Used exception handling
